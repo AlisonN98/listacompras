@@ -142,6 +142,22 @@
                 }
             });
             
+            // Busca automática de preços quando o usuário para de digitar
+            let searchTimeout;
+            itemInput.addEventListener("input", function() {
+                clearTimeout(searchTimeout);
+                const itemName = this.value.trim();
+                
+                if (itemName.length >= 3) { // Buscar apenas se tiver pelo menos 3 caracteres
+                    searchTimeout = setTimeout(() => {
+                        autoSearchPrice(itemName);
+                    }, 1000); // Aguardar 1 segundo após parar de digitar
+                } else {
+                    // Limpar resultados se o campo estiver vazio
+                    document.getElementById("priceResults").style.display = 'none';
+                }
+            });
+            
             // Eventos de toque para mobile
             addButton.addEventListener("click", function(e) {
                 console.log("Botão clicado!");
@@ -420,60 +436,139 @@
         `;
         document.head.appendChild(style);
         
-        // Banco de dados de preços médios (baseado em preços UK)
+        // Banco de dados expandido de preços médios (baseado em preços UK)
         const priceDatabase = {
-            "leite": { asda: 0.89, tesco: 0.95, sainsburys: 0.92, morrisons: 0.88 },
-            "pão": { asda: 0.45, tesco: 0.50, sainsburys: 0.48, morrisons: 0.46 },
-            "ovos": { asda: 1.20, tesco: 1.25, sainsburys: 1.22, morrisons: 1.18 },
-            "manteiga": { asda: 1.50, tesco: 1.55, sainsburys: 1.52, morrisons: 1.48 },
-            "queijo": { asda: 2.20, tesco: 2.30, sainsburys: 2.25, morrisons: 2.18 },
-            "frango": { asda: 3.50, tesco: 3.60, sainsburys: 3.55, morrisons: 3.45 },
-            "carne": { asda: 4.20, tesco: 4.30, sainsburys: 4.25, morrisons: 4.15 },
-            "peixe": { asda: 3.80, tesco: 3.90, sainsburys: 3.85, morrisons: 3.75 },
-            "arroz": { asda: 1.20, tesco: 1.25, sainsburys: 1.22, morrisons: 1.18 },
-            "macarrão": { asda: 0.80, tesco: 0.85, sainsburys: 0.82, morrisons: 0.78 },
-            "batata": { asda: 1.50, tesco: 1.55, sainsburys: 1.52, morrisons: 1.48 },
-            "tomate": { asda: 1.80, tesco: 1.85, sainsburys: 1.82, morrisons: 1.78 },
-            "cebola": { asda: 0.60, tesco: 0.65, sainsburys: 0.62, morrisons: 0.58 },
-            "alface": { asda: 0.50, tesco: 0.55, sainsburys: 0.52, morrisons: 0.48 },
-            "banana": { asda: 0.80, tesco: 0.85, sainsburys: 0.82, morrisons: 0.78 },
-            "maçã": { asda: 1.20, tesco: 1.25, sainsburys: 1.22, morrisons: 1.18 },
-            "laranja": { asda: 1.00, tesco: 1.05, sainsburys: 1.02, morrisons: 0.98 },
-            "açúcar": { asda: 0.65, tesco: 0.70, sainsburys: 0.67, morrisons: 0.63 },
-            "sal": { asda: 0.30, tesco: 0.35, sainsburys: 0.32, morrisons: 0.28 },
-            "óleo": { asda: 1.80, tesco: 1.85, sainsburys: 1.82, morrisons: 1.78 }
+            // Laticínios
+            "leite": { asda: 0.89, tesco: 0.95, sainsburys: 0.92, morrisons: 0.88, names: ["leite", "milk", "lait"] },
+            "manteiga": { asda: 1.50, tesco: 1.55, sainsburys: 1.52, morrisons: 1.48, names: ["manteiga", "butter", "beurre"] },
+            "queijo": { asda: 2.20, tesco: 2.30, sainsburys: 2.25, morrisons: 2.18, names: ["queijo", "cheese", "fromage"] },
+            "iogurte": { asda: 0.75, tesco: 0.80, sainsburys: 0.78, morrisons: 0.73, names: ["iogurte", "yogurt", "yaourt"] },
+            "creme": { asda: 1.20, tesco: 1.25, sainsburys: 1.22, morrisons: 1.18, names: ["creme", "cream", "crème"] },
+            
+            // Pães e Cereais
+            "pão": { asda: 0.45, tesco: 0.50, sainsburys: 0.48, morrisons: 0.46, names: ["pão", "bread", "pain"] },
+            "cereal": { asda: 2.50, tesco: 2.60, sainsburys: 2.55, morrisons: 2.48, names: ["cereal", "cereais", "céréales"] },
+            "aveia": { asda: 1.80, tesco: 1.85, sainsburys: 1.82, morrisons: 1.78, names: ["aveia", "oats", "avoine"] },
+            
+            // Proteínas
+            "ovos": { asda: 1.20, tesco: 1.25, sainsburys: 1.22, morrisons: 1.18, names: ["ovos", "eggs", "œufs"] },
+            "frango": { asda: 3.50, tesco: 3.60, sainsburys: 3.55, morrisons: 3.45, names: ["frango", "chicken", "poulet"] },
+            "carne": { asda: 4.20, tesco: 4.30, sainsburys: 4.25, morrisons: 4.15, names: ["carne", "beef", "viande"] },
+            "porco": { asda: 3.80, tesco: 3.90, sainsburys: 3.85, morrisons: 3.75, names: ["porco", "pork", "porc"] },
+            "peixe": { asda: 3.80, tesco: 3.90, sainsburys: 3.85, morrisons: 3.75, names: ["peixe", "fish", "poisson"] },
+            "salmão": { asda: 6.50, tesco: 6.60, sainsburys: 6.55, morrisons: 6.45, names: ["salmão", "salmon", "saumon"] },
+            "atum": { asda: 1.20, tesco: 1.25, sainsburys: 1.22, morrisons: 1.18, names: ["atum", "tuna", "thon"] },
+            
+            // Grãos e Massas
+            "arroz": { asda: 1.20, tesco: 1.25, sainsburys: 1.22, morrisons: 1.18, names: ["arroz", "rice", "riz"] },
+            "macarrão": { asda: 0.80, tesco: 0.85, sainsburys: 0.82, morrisons: 0.78, names: ["macarrão", "pasta", "pâtes"] },
+            "feijão": { asda: 0.90, tesco: 0.95, sainsburys: 0.92, morrisons: 0.88, names: ["feijão", "beans", "haricots"] },
+            "lentilha": { asda: 1.10, tesco: 1.15, sainsburys: 1.12, morrisons: 1.08, names: ["lentilha", "lentils", "lentilles"] },
+            
+            // Vegetais
+            "batata": { asda: 1.50, tesco: 1.55, sainsburys: 1.52, morrisons: 1.48, names: ["batata", "potato", "pomme de terre"] },
+            "tomate": { asda: 1.80, tesco: 1.85, sainsburys: 1.82, morrisons: 1.78, names: ["tomate", "tomato", "tomate"] },
+            "cebola": { asda: 0.60, tesco: 0.65, sainsburys: 0.62, morrisons: 0.58, names: ["cebola", "onion", "oignon"] },
+            "alho": { asda: 0.40, tesco: 0.45, sainsburys: 0.42, morrisons: 0.38, names: ["alho", "garlic", "ail"] },
+            "cenoura": { asda: 0.70, tesco: 0.75, sainsburys: 0.72, morrisons: 0.68, names: ["cenoura", "carrot", "carotte"] },
+            "alface": { asda: 0.50, tesco: 0.55, sainsburys: 0.52, morrisons: 0.48, names: ["alface", "lettuce", "laitue"] },
+            "espinafre": { asda: 1.20, tesco: 1.25, sainsburys: 1.22, morrisons: 1.18, names: ["espinafre", "spinach", "épinards"] },
+            "brócolis": { asda: 1.40, tesco: 1.45, sainsburys: 1.42, morrisons: 1.38, names: ["brócolis", "broccoli", "brocoli"] },
+            "pimentão": { asda: 1.60, tesco: 1.65, sainsburys: 1.62, morrisons: 1.58, names: ["pimentão", "pepper", "poivron"] },
+            "cogumelo": { asda: 1.80, tesco: 1.85, sainsburys: 1.82, morrisons: 1.78, names: ["cogumelo", "mushroom", "champignon"] },
+            
+            // Frutas
+            "banana": { asda: 0.80, tesco: 0.85, sainsburys: 0.82, morrisons: 0.78, names: ["banana", "banana", "banane"] },
+            "maçã": { asda: 1.20, tesco: 1.25, sainsburys: 1.22, morrisons: 1.18, names: ["maçã", "apple", "pomme"] },
+            "laranja": { asda: 1.00, tesco: 1.05, sainsburys: 1.02, morrisons: 0.98, names: ["laranja", "orange", "orange"] },
+            "uva": { asda: 2.50, tesco: 2.60, sainsburys: 2.55, morrisons: 2.48, names: ["uva", "grapes", "raisins"] },
+            "morango": { asda: 2.20, tesco: 2.30, sainsburys: 2.25, morrisons: 2.18, names: ["morango", "strawberry", "fraise"] },
+            "limão": { asda: 0.60, tesco: 0.65, sainsburys: 0.62, morrisons: 0.58, names: ["limão", "lemon", "citron"] },
+            "abacate": { asda: 1.80, tesco: 1.85, sainsburys: 1.82, morrisons: 1.78, names: ["abacate", "avocado", "avocat"] },
+            
+            // Temperos e Condimentos
+            "açúcar": { asda: 0.65, tesco: 0.70, sainsburys: 0.67, morrisons: 0.63, names: ["açúcar", "sugar", "sucre"] },
+            "sal": { asda: 0.30, tesco: 0.35, sainsburys: 0.32, morrisons: 0.28, names: ["sal", "salt", "sel"] },
+            "pimenta": { asda: 1.20, tesco: 1.25, sainsburys: 1.22, morrisons: 1.18, names: ["pimenta", "pepper", "poivre"] },
+            "óleo": { asda: 1.80, tesco: 1.85, sainsburys: 1.82, morrisons: 1.78, names: ["óleo", "oil", "huile"] },
+            "azeite": { asda: 3.50, tesco: 3.60, sainsburys: 3.55, morrisons: 3.45, names: ["azeite", "olive oil", "huile d'olive"] },
+            "vinagre": { asda: 0.80, tesco: 0.85, sainsburys: 0.82, morrisons: 0.78, names: ["vinagre", "vinegar", "vinaigre"] },
+            "ketchup": { asda: 1.20, tesco: 1.25, sainsburys: 1.22, morrisons: 1.18, names: ["ketchup", "ketchup", "ketchup"] },
+            "mostarda": { asda: 1.00, tesco: 1.05, sainsburys: 1.02, morrisons: 0.98, names: ["mostarda", "mustard", "moutarde"] },
+            "maionese": { asda: 1.50, tesco: 1.55, sainsburys: 1.52, morrisons: 1.48, names: ["maionese", "mayonnaise", "mayonnaise"] },
+            
+            // Bebidas
+            "água": { asda: 0.50, tesco: 0.55, sainsburys: 0.52, morrisons: 0.48, names: ["água", "water", "eau"] },
+            "suco": { asda: 1.20, tesco: 1.25, sainsburys: 1.22, morrisons: 1.18, names: ["suco", "juice", "jus"] },
+            "café": { asda: 3.50, tesco: 3.60, sainsburys: 3.55, morrisons: 3.45, names: ["café", "coffee", "café"] },
+            "chá": { asda: 2.20, tesco: 2.30, sainsburys: 2.25, morrisons: 2.18, names: ["chá", "tea", "thé"] },
+            "cerveja": { asda: 1.20, tesco: 1.25, sainsburys: 1.22, morrisons: 1.18, names: ["cerveja", "beer", "bière"] },
+            "vinho": { asda: 5.50, tesco: 5.60, sainsburys: 5.55, morrisons: 5.45, names: ["vinho", "wine", "vin"] },
+            
+            // Snacks e Doces
+            "chocolate": { asda: 2.50, tesco: 2.60, sainsburys: 2.55, morrisons: 2.48, names: ["chocolate", "chocolate", "chocolat"] },
+            "biscoito": { asda: 1.80, tesco: 1.85, sainsburys: 1.82, morrisons: 1.78, names: ["biscoito", "cookies", "biscuits"] },
+            "bolacha": { asda: 1.50, tesco: 1.55, sainsburys: 1.52, morrisons: 1.48, names: ["bolacha", "crackers", "crackers"] },
+            "pipoca": { asda: 1.20, tesco: 1.25, sainsburys: 1.22, morrisons: 1.18, names: ["pipoca", "popcorn", "popcorn"] },
+            "gelado": { asda: 3.50, tesco: 3.60, sainsburys: 3.55, morrisons: 3.45, names: ["gelado", "ice cream", "glace"] },
+            
+            // Produtos de Limpeza
+            "sabão": { asda: 1.20, tesco: 1.25, sainsburys: 1.22, morrisons: 1.18, names: ["sabão", "soap", "savon"] },
+            "shampoo": { asda: 2.50, tesco: 2.60, sainsburys: 2.55, morrisons: 2.48, names: ["shampoo", "shampoo", "shampooing"] },
+            "papel": { asda: 4.50, tesco: 4.60, sainsburys: 4.55, morrisons: 4.45, names: ["papel", "toilet paper", "papier toilette"] },
+            "detergente": { asda: 1.80, tesco: 1.85, sainsburys: 1.82, morrisons: 1.78, names: ["detergente", "detergent", "détergent"] }
         };
         
         function searchPrices(itemName) {
             const resultsDiv = document.getElementById("priceResults");
             const normalizedName = itemName.toLowerCase().trim();
             
-            // Buscar no banco de dados
+            // Buscar no banco de dados com múltiplos idiomas
             let foundPrices = null;
-            for (const [key, prices] of Object.entries(priceDatabase)) {
+            let foundKey = null;
+            
+            for (const [key, data] of Object.entries(priceDatabase)) {
+                // Verificar se o nome digitado corresponde a algum dos nomes do produto
+                if (data.names && data.names.some(name => 
+                    normalizedName.includes(name.toLowerCase()) || 
+                    name.toLowerCase().includes(normalizedName)
+                )) {
+                    foundPrices = data;
+                    foundKey = key;
+                    break;
+                }
+                
+                // Fallback: busca simples por palavra-chave
                 if (normalizedName.includes(key) || key.includes(normalizedName)) {
-                    foundPrices = prices;
+                    foundPrices = data;
+                    foundKey = key;
                     break;
                 }
             }
             
             if (foundPrices) {
                 // Mostrar preços encontrados
-                let html = '<h4>Preços encontrados:</h4>';
+                let html = `<h4>✅ Produto encontrado: ${foundKey}</h4>`;
                 for (const [store, price] of Object.entries(foundPrices)) {
-                    html += `
-                        <div class="price-item">
-                            <span class="price-store">${store.charAt(0).toUpperCase() + store.slice(1)}</span>
-                            <span class="price-value">£${price.toFixed(2)}</span>
-                        </div>
-                    `;
+                    if (store !== 'names') { // Pular o campo 'names'
+                        html += `
+                            <div class="price-item">
+                                <span class="price-store">${store.charAt(0).toUpperCase() + store.slice(1)}</span>
+                                <span class="price-value">£${price.toFixed(2)}</span>
+                            </div>
+                        `;
+                    }
                 }
                 
-                // Calcular preço médio
-                const averagePrice = Object.values(foundPrices).reduce((sum, price) => sum + price, 0) / Object.values(foundPrices).length;
+                // Calcular preço médio (excluindo o campo 'names')
+                const prices = Object.entries(foundPrices)
+                    .filter(([key]) => key !== 'names')
+                    .map(([, price]) => price);
+                const averagePrice = prices.reduce((sum, price) => sum + price, 0) / prices.length;
+                
                 html += `
                     <div class="price-item" style="border-top: 2px solid #4CAF50; margin-top: 10px; padding-top: 10px;">
-                        <span class="price-store" style="color: #4CAF50;">Preço Médio</span>
+                        <span class="price-store" style="color: #4CAF50;">💰 Preço Médio</span>
                         <span class="price-value" style="color: #4CAF50; font-weight: bold;">£${averagePrice.toFixed(2)}</span>
                     </div>
                 `;
@@ -484,7 +579,7 @@
                 // Preencher automaticamente o campo de preço com o valor médio
                 document.getElementById("priceInput").value = averagePrice.toFixed(2);
                 
-                showNotification("Preços encontrados! Preço médio preenchido automaticamente.", "success");
+                showNotification(`✅ ${foundKey} encontrado! Preço médio: £${averagePrice.toFixed(2)}`, "success");
             } else {
                 // Não encontrou preços específicos
                 resultsDiv.innerHTML = `
@@ -505,6 +600,48 @@
                 `;
                 resultsDiv.style.display = 'block';
                 showNotification("Produto não encontrado. Links para busca manual fornecidos.", "info");
+            }
+        }
+        
+        // Função para busca automática de preços
+        function autoSearchPrice(itemName) {
+            const normalizedName = itemName.toLowerCase().trim();
+            
+            // Buscar no banco de dados com múltiplos idiomas
+            let foundPrices = null;
+            let foundKey = null;
+            
+            for (const [key, data] of Object.entries(priceDatabase)) {
+                // Verificar se o nome digitado corresponde a algum dos nomes do produto
+                if (data.names && data.names.some(name => 
+                    normalizedName.includes(name.toLowerCase()) || 
+                    name.toLowerCase().includes(normalizedName)
+                )) {
+                    foundPrices = data;
+                    foundKey = key;
+                    break;
+                }
+                
+                // Fallback: busca simples por palavra-chave
+                if (normalizedName.includes(key) || key.includes(normalizedName)) {
+                    foundPrices = data;
+                    foundKey = key;
+                    break;
+                }
+            }
+            
+            if (foundPrices) {
+                // Calcular preço médio (excluindo o campo 'names')
+                const prices = Object.entries(foundPrices)
+                    .filter(([key]) => key !== 'names')
+                    .map(([, price]) => price);
+                const averagePrice = prices.reduce((sum, price) => sum + price, 0) / prices.length;
+                
+                // Preencher automaticamente o campo de preço
+                document.getElementById("priceInput").value = averagePrice.toFixed(2);
+                
+                // Mostrar notificação discreta
+                showNotification(`💰 ${foundKey}: £${averagePrice.toFixed(2)}`, "success");
             }
         }
         
