@@ -45,6 +45,8 @@
         .btn-complete:disabled { background-color: #666666; cursor: not-allowed; }
         .btn-remove { background-color: #f44336; color: white; }
         .btn-remove:hover { background-color: #da190b; }
+        .btn-clear { padding: 8px 16px; background-color: #ff5722; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; transition: background-color 0.3s ease; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+        .btn-clear:hover { background-color: #e64a19; }
         .stats { background-color: #1a1a1a; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 15px rgba(255, 255, 255, 0.1); }
         .stats p { margin: 10px 0; font-size: 16px; font-weight: 500; }
         .stats span { color: #4CAF50; font-weight: bold; font-size: 18px; }
@@ -112,14 +114,20 @@
             <p>Itens comprados: <span id="purchasedItems">0</span></p>
             <p>Valor total estimado: <span id="totalPrice">£0.00</span></p>
             <p>Valor comprado: <span id="purchasedPrice">£0.00</span></p>
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #333;">
+                <p style="font-size: 12px; color: #888;">Sessão: <span id="sessionId">Carregando...</span></p>
+                <button id="clearDataButton" class="btn-clear" style="margin-top: 10px;">🗑️ Limpar Minha Lista</button>
+            </div>
         </div>
     </div>
     
     <script>
         let shoppingList = [];
+        let sessionId = null;
         
         document.addEventListener("DOMContentLoaded", function() {
             console.log("App carregado!");
+            initializeSession();
             loadFromLocalStorage();
             updateStats();
             
@@ -172,6 +180,13 @@
                     searchPrices(itemName);
                 } else {
                     alert("Digite um item primeiro para buscar preços!");
+                }
+            });
+            
+            // Evento para limpar dados
+            document.getElementById("clearDataButton").addEventListener("click", function() {
+                if (confirm("Tem certeza que deseja limpar TODA a sua lista de compras? Esta ação não pode ser desfeita.")) {
+                    clearAllData();
                 }
             });
         });
@@ -323,7 +338,8 @@
         
         function saveToLocalStorage() {
             try {
-                localStorage.setItem("shoppingList", JSON.stringify(shoppingList));
+                const key = `shoppingList_${sessionId}`;
+                localStorage.setItem(key, JSON.stringify(shoppingList));
             } catch (error) {
                 console.error("Erro ao salvar no localStorage:", error);
                 showNotification("Erro ao salvar dados localmente", "error");
@@ -332,7 +348,8 @@
         
         function loadFromLocalStorage() {
             try {
-                const saved = localStorage.getItem("shoppingList");
+                const key = `shoppingList_${sessionId}`;
+                const saved = localStorage.getItem(key);
                 if (saved) {
                     shoppingList = JSON.parse(saved);
                     renderList();
@@ -489,6 +506,67 @@
                 resultsDiv.style.display = 'block';
                 showNotification("Produto não encontrado. Links para busca manual fornecidos.", "info");
             }
+        }
+        
+        // Função para inicializar sessão única
+        function initializeSession() {
+            // Verificar se já existe uma sessão
+            let existingSession = sessionStorage.getItem('shoppingSessionId');
+            
+            if (existingSession) {
+                sessionId = existingSession;
+            } else {
+                // Criar nova sessão única
+                sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                sessionStorage.setItem('shoppingSessionId', sessionId);
+            }
+            
+            // Mostrar ID da sessão (primeiros 8 caracteres)
+            document.getElementById('sessionId').textContent = sessionId.substr(0, 8) + '...';
+            
+            console.log('Sessão inicializada:', sessionId);
+        }
+        
+        // Função para limpar todos os dados
+        function clearAllData() {
+            try {
+                // Limpar lista atual
+                shoppingList = [];
+                
+                // Limpar localStorage da sessão
+                const key = `shoppingList_${sessionId}`;
+                localStorage.removeItem(key);
+                
+                // Limpar sessionStorage
+                sessionStorage.removeItem('shoppingSessionId');
+                
+                // Limpar resultados de preços
+                document.getElementById('priceResults').style.display = 'none';
+                document.getElementById('priceResults').innerHTML = '';
+                
+                // Atualizar interface
+                renderList();
+                updateStats();
+                
+                // Criar nova sessão
+                initializeSession();
+                
+                showNotification("Lista limpa com sucesso! Nova sessão criada.", "success");
+                
+            } catch (error) {
+                console.error("Erro ao limpar dados:", error);
+                showNotification("Erro ao limpar dados", "error");
+            }
+        }
+        
+        // Função para mostrar informações da sessão
+        function showSessionInfo() {
+            const info = `
+                Sessão: ${sessionId}
+                Itens salvos: ${shoppingList.length}
+                Total estimado: £${shoppingList.reduce((sum, item) => sum + (item.price || 0), 0).toFixed(2)}
+            `;
+            alert(info);
         }
     </script>
 </body>
